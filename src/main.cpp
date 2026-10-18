@@ -16,7 +16,7 @@ class VulkanApp{
   GLFWwindow *window = nullptr;
   vkb::Instance vkb_instance;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
-  vkb::Device vkb_device = nullptr;
+  vkb::Device vkb_device;
 
 
   void init_vulkan () {
