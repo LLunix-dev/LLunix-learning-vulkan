@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/VulkanApp.dir/link.d CMakeFiles/VulkanApp.dir/src/main.cpp.o -o VulkanApp  -Wl,-rpath,/home/lar/vulkansdk/1.4.357.1/x86_64/lib/VulkanLoader/lib /home/lar/vulkansdk/1.4.357.1/x86_64/lib/VulkanLoader/lib/libvulkan.so /usr/lib/x86_64-linux-gnu/libglfw.so.3.4 vk-bootstrap/libvk-bootstrap.a -ldl

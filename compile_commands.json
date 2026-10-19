@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/home/lar/code/LLunix-learning-vulkan",
+  "command": "/usr/bin/c++  -I/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/src -isystem /home/lar/vulkansdk/1.4.357.1/x86_64/include -std=c++20 -o CMakeFiles/VulkanApp.dir/src/main.cpp.o -c /home/lar/code/LLunix-learning-vulkan/src/main.cpp",
+  "file": "/home/lar/code/LLunix-learning-vulkan/src/main.cpp",
+  "output": "CMakeFiles/VulkanApp.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/lar/code/LLunix-learning-vulkan/vk-bootstrap",
+  "command": "/usr/bin/c++  -I/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/src -isystem /home/lar/vulkansdk/1.4.357.1/x86_64/include -std=c++20 -Wall -Wextra -Wconversion -Wsign-conversion -Wstrict-aliasing -o CMakeFiles/vk-bootstrap.dir/src/VkBootstrap.cpp.o -c /home/lar/code/LLunix-learning-vulkan/vk-bootstrap/src/VkBootstrap.cpp",
+  "file": "/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/src/VkBootstrap.cpp",
+  "output": "vk-bootstrap/CMakeFiles/vk-bootstrap.dir/src/VkBootstrap.cpp.o"
+}
+]

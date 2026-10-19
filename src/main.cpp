@@ -1,8 +1,24 @@
+
+#include "vulkan/vulkan.hpp"
+#include <cstdint>
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
+#include <fstream>
 
+static std::vector<char> readFile(const std::string& filename) {
+  std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+  if(!file.is_open()) {
+    throw std::runtime_error("Faileeed to opan da fielee");
+  }
+  std::vector<char> buffer(file.tellg());
+  file.seekg(0, std::ios::beg);
+  file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+  file.close();
+  return buffer;
+}
 
 
 class VulkanApp{
@@ -15,6 +31,7 @@ class VulkanApp{
     create_graphics_queue();
     create_swapchain();
     createImageViews();
+    createGraphicsPipeline();
 
     cleanup();
   }
@@ -27,11 +44,12 @@ class VulkanApp{
   std::vector<vk::ImageView> swapChainImageViews;
   vk::Format swapChainSurfaceFormat;
   std::vector<vk::Image> swapChainImages;
+  vk::ShaderModule shaderModule;
 
   void init_vulkan () {
     vkb::InstanceBuilder builder;
 
-    auto inst_ret = builder.set_app_name("LLunix's Vulkan Journey").request_validation_layers().use_default_debug_messenger().build();
+    auto inst_ret = builder.set_app_name("LLunix's Vulkan Journey").require_api_version(1, 4, 0).request_validation_layers().use_default_debug_messenger().build();
     if(!inst_ret) {
       std::cerr << "Faileed to creata da Vulkan Instanc";
     };
@@ -51,8 +69,10 @@ class VulkanApp{
     }
   }
   void select_phys_device(){
+    vk::PhysicalDeviceVulkan11Features features11{};
+    features11.shaderDrawParameters = VK_TRUE;
     vkb::PhysicalDeviceSelector selector{ vkb_instance };
-    auto phys_ret = selector.set_surface(surface).select();
+    auto phys_ret = selector.set_surface(surface).set_required_features_11(features11).select();
     if (!phys_ret) {
       std::cerr << "Failed to select Vulkan Physical Device. Error: " << phys_ret.error().message() << "\n";
       if (phys_ret.error() == vkb::PhysicalDeviceError::no_suitable_device) {
@@ -117,10 +137,33 @@ class VulkanApp{
     for (auto &image : swapChainImages) {
       imageViewCreateInfo.image =image;
       swapChainImageViews.emplace_back(vk_device.createImageView(imageViewCreateInfo));
-      //todo
     }
   }
+
+  [[nodiscard]] vk::ShaderModule createShaderModule(const std::vector<char>& code) const {
+    vk::ShaderModuleCreateInfo createInfo{};
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    vk::Device vk_device =  static_cast<vk::Device>(vkb_device.device);
+    vk::ShaderModule shaderModule = vk_device.createShaderModule(createInfo);
+    return shaderModule;
+  }
+
   void createGraphicsPipeline() {
+    auto shaderCode = readFile("shaders/slang.spv");
+    shaderModule = createShaderModule(shaderCode);
+    vk::PipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
+    vertShaderStageInfo.module = shaderModule;
+    vertShaderStageInfo.pName = "vertMain";
+
+
+    vk::PipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
+    fragShaderStageInfo.module = shaderModule;
+    fragShaderStageInfo.pName = "fragMain";
+    vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo};
 
   }
 
@@ -128,10 +171,23 @@ class VulkanApp{
 
 
   void cleanup(){
+
+
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+
+    vk_device.destroyShaderModule(shaderModule);
+    for (auto imageView : swapChainImageViews) {
+        vk_device.destroyImageView(imageView);
+    }
+
+    swapChainImageViews.clear();
+
     vkb::destroy_swapchain(vkb_swapchain);
+
     vkb::destroy_device(vkb_device);
     vkb::destroy_surface(vkb_instance, surface);
     vkb::destroy_instance(vkb_instance);
+
     glfwDestroyWindow(window);
     glfwTerminate();
   }

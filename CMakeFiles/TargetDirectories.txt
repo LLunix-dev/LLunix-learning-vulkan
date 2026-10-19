@@ -1,0 +1,7 @@
+/home/lar/code/LLunix-learning-vulkan/CMakeFiles/VulkanApp.dir
+/home/lar/code/LLunix-learning-vulkan/CMakeFiles/foo.dir
+/home/lar/code/LLunix-learning-vulkan/CMakeFiles/edit_cache.dir
+/home/lar/code/LLunix-learning-vulkan/CMakeFiles/rebuild_cache.dir
+/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/CMakeFiles/vk-bootstrap.dir
+/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/CMakeFiles/edit_cache.dir
+/home/lar/code/LLunix-learning-vulkan/vk-bootstrap/CMakeFiles/rebuild_cache.dir

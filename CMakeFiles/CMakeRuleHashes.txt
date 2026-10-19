@@ -1,0 +1,3 @@
+# Hashes of file build rules.
+4c47b2400daf38d8759ffb4735f8b8f8 CMakeFiles/foo
+557013486abd61965bdb707ae09d5a8d shaders/slang.spv
