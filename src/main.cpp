@@ -1,3 +1,4 @@
+#include "vulkan/vulkan.hpp"
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
@@ -23,6 +24,9 @@ class VulkanApp{
   VkSurfaceKHR surface = VK_NULL_HANDLE;
   vkb::Device vkb_device;
   vkb::Swapchain vkb_swapchain;
+  std::vector<vk::ImageView> swapChainImageViews;
+  vk::Format swapChainSurfaceFormat;
+  std::vector<vk::Image> swapChainImages;
 
   void init_vulkan () {
     vkb::InstanceBuilder builder;
@@ -91,7 +95,33 @@ class VulkanApp{
     }
     vkb_swapchain = swap_ret.value();
 
+    swapChainSurfaceFormat = static_cast<vk::Format>(vkb_swapchain.image_format);
+    auto images_ret = vkb_swapchain.get_images();
+
+    for (VkImage image : images_ret.value()) {
+      swapChainImages.emplace_back(image);
+    }
   }
+
+  void createImageViews(){
+    assert(swapChainImageViews.empty());
+
+
+    vk::ImageViewCreateInfo imageViewCreateInfo{};
+    imageViewCreateInfo.viewType = vk::ImageViewType::e2D;
+    imageViewCreateInfo.format = swapChainSurfaceFormat;
+    imageViewCreateInfo.subresourceRange = {
+      vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1
+    };
+    for (auto &image : swapChainImages) {
+      imageViewCreateInfo.image =image;
+      swapChainImageViews.emplace_back()
+      //todo
+    }
+  }
+
+
+
 
   void cleanup(){
     vkb::destroy_swapchain(vkb_swapchain);
