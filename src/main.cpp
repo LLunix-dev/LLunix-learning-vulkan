@@ -25,14 +25,6 @@ class VulkanApp{
   public:
   void run(){
     init_vulkan();
-    init_window();
-    create_surface();
-    select_phys_device();
-    create_graphics_queue();
-    create_swapchain();
-    createImageViews();
-    createGraphicsPipeline();
-
     cleanup();
   }
   private:
@@ -46,7 +38,18 @@ class VulkanApp{
   std::vector<vk::Image> swapChainImages;
   vk::ShaderModule shaderModule;
 
-  void init_vulkan () {
+  void init_vulkan() {
+    create_instance();
+    init_window();
+    create_surface();
+    select_phys_device();
+    create_graphics_queue();
+    create_swapchain();
+    createImageViews();
+    createGraphicsPipeline();
+  }
+
+  void create_instance () {
     vkb::InstanceBuilder builder;
 
     auto inst_ret = builder.set_app_name("LLunix's Vulkan Journey").require_api_version(1, 4, 0).request_validation_layers().use_default_debug_messenger().build();
@@ -54,7 +57,6 @@ class VulkanApp{
       std::cerr << "Faileed to creata da Vulkan Instanc";
     };
     vkb_instance = inst_ret.value();
-
   }
 
   void init_window() {
