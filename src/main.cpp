@@ -1,4 +1,3 @@
-#include "vulkan/vulkan.hpp"
 #include <iostream>
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
@@ -15,6 +14,7 @@ class VulkanApp{
     select_phys_device();
     create_graphics_queue();
     create_swapchain();
+    createImageViews();
 
     cleanup();
   }
@@ -113,11 +113,15 @@ class VulkanApp{
     imageViewCreateInfo.subresourceRange = {
       vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1
     };
+    vk::Device vk_device =  static_cast<vk::Device>(vkb_device.device);
     for (auto &image : swapChainImages) {
       imageViewCreateInfo.image =image;
-      swapChainImageViews.emplace_back()
+      swapChainImageViews.emplace_back(vk_device.createImageView(imageViewCreateInfo));
       //todo
     }
+  }
+  void createGraphicsPipeline() {
+
   }
 
 
