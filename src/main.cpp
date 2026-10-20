@@ -37,6 +37,8 @@ class VulkanApp{
   vk::Format swapChainSurfaceFormat;
   std::vector<vk::Image> swapChainImages;
   vk::ShaderModule shaderModule;
+  vk::Extent2D swapChainExtent;
+  vk::PhysicalDevice physicalDevice;
 
   void init_vulkan() {
     create_instance();
@@ -75,6 +77,8 @@ class VulkanApp{
     features11.shaderDrawParameters = VK_TRUE;
     vkb::PhysicalDeviceSelector selector{ vkb_instance };
     auto phys_ret = selector.set_surface(surface).set_required_features_11(features11).select();
+    physicalDevice = static_cast<vk::PhysicalDevice>(phys_ret.value());
+    std::cout << phys_ret.value().name;
     if (!phys_ret) {
       std::cerr << "Failed to select Vulkan Physical Device. Error: " << phys_ret.error().message() << "\n";
       if (phys_ret.error() == vkb::PhysicalDeviceError::no_suitable_device) {
@@ -119,6 +123,10 @@ class VulkanApp{
 
     swapChainSurfaceFormat = static_cast<vk::Format>(vkb_swapchain.image_format);
     auto images_ret = vkb_swapchain.get_images();
+
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
+
+    swapChainExtent = chooseSwapExtent(surfaceCapabilities);
 
     for (VkImage image : images_ret.value()) {
       swapChainImages.emplace_back(image);
@@ -165,7 +173,12 @@ class VulkanApp{
     fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
     fragShaderStageInfo.module = shaderModule;
     fragShaderStageInfo.pName = "fragMain";
-    vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo};
+    vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    vk::PipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
+    vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(swapchainE)}
 
   }
 
@@ -192,6 +205,18 @@ class VulkanApp{
 
     glfwDestroyWindow(window);
     glfwTerminate();
+  }
+  vk::Extent2D chooseSwapExtent(vk::SurfaceCapabilitiesKHR const &capabilities)
+  {
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()){
+      return capabilities.currentExtent;
+    }
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    return {
+      std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+      std::clamp<uint32_t>(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)};
   }
 
 };
