@@ -178,7 +178,8 @@ class VulkanApp{
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
-    vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(swapchainE)}
+    vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f};
+    //todo
 
   }
 
