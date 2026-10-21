@@ -39,6 +39,8 @@ class VulkanApp{
   vk::ShaderModule shaderModule;
   vk::Extent2D swapChainExtent;
   vk::PhysicalDevice physicalDevice;
+  vk::PipelineLayout pipelineLayout = nullptr;
+  vk::Pipeline graphicsPipeline = nullptr;
 
   void init_vulkan() {
     create_instance();
@@ -75,8 +77,10 @@ class VulkanApp{
   void select_phys_device(){
     vk::PhysicalDeviceVulkan11Features features11{};
     features11.shaderDrawParameters = VK_TRUE;
+    vk::PhysicalDeviceVulkan13Features features13{};
+    features13.dynamicRendering = VK_TRUE;
     vkb::PhysicalDeviceSelector selector{ vkb_instance };
-    auto phys_ret = selector.set_surface(surface).set_required_features_11(features11).select();
+    auto phys_ret = selector.set_surface(surface).set_required_features_11(features11).set_required_features_13(features13).select();
     physicalDevice = static_cast<vk::PhysicalDevice>(phys_ret.value());
     std::cout << phys_ret.value().name;
     if (!phys_ret) {
@@ -179,10 +183,75 @@ class VulkanApp{
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
     vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f};
-    //todo
+    vk::PipelineViewportStateCreateInfo viewportState{};
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
 
+
+    vk::PipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.depthClampEnable = vk::False;
+    rasterizer.rasterizerDiscardEnable = vk::False;
+    rasterizer.polygonMode = vk::PolygonMode::eFill;
+    rasterizer.cullMode = vk::CullModeFlagBits::eBack;
+    rasterizer.frontFace = vk::FrontFace::eClockwise;
+    rasterizer.depthBiasEnable = vk::False;
+    rasterizer.lineWidth = 1.0f;
+    vk::PipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+    multisampling.sampleShadingEnable = vk::False;
+
+    vk::PipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.blendEnable = vk::False;
+    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    colorBlendAttachment.colorBlendOp        = vk::BlendOp::eAdd;
+    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    colorBlendAttachment.alphaBlendOp        = vk::BlendOp::eAdd;
+    colorBlendAttachment.colorWriteMask      = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    vk::PipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.logicOpEnable = vk::False;
+    colorBlending.logicOp = vk::LogicOp::eCopy;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    std::vector<vk::DynamicState>      dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+    vk::PipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+
+
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+    pipelineLayout = vk_device.createPipelineLayout(pipelineLayoutInfo);
+
+
+    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo{};
+    pipelineRenderingCreateInfo.colorAttachmentCount =1 ;
+    pipelineRenderingCreateInfo.pColorAttachmentFormats = &swapChainSurfaceFormat;
+
+    vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {{},{}};
+    auto& pipelineInfo = pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>();
+    pipelineInfo.stageCount          = 2;
+    pipelineInfo.pStages             = shaderStages;
+    pipelineInfo.pVertexInputState   = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState      = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState   = &multisampling;
+    pipelineInfo.pColorBlendState    = &colorBlending;
+    pipelineInfo.pDynamicState       = &dynamicState;
+    pipelineInfo.layout              = pipelineLayout;
+    pipelineInfo.renderPass          = nullptr;
+
+    auto& renderingInfo = pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>();
+    renderingInfo.colorAttachmentCount    = 1;
+    renderingInfo.pColorAttachmentFormats = &swapChainSurfaceFormat;
+
+    graphicsPipeline = vk_device.createGraphicsPipeline(nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()).value;
   }
-
 
 
 
@@ -190,8 +259,10 @@ class VulkanApp{
 
 
     vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
-
+    vk_device.destroyPipeline(graphicsPipeline);
+    vk_device.destroyPipelineLayout(pipelineLayout);
     vk_device.destroyShaderModule(shaderModule);
+
     for (auto imageView : swapChainImageViews) {
         vk_device.destroyImageView(imageView);
     }
