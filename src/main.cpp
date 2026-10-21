@@ -41,6 +41,8 @@ class VulkanApp{
   vk::PhysicalDevice physicalDevice;
   vk::PipelineLayout pipelineLayout = nullptr;
   vk::Pipeline graphicsPipeline = nullptr;
+  vk::CommandPool commandPool = nullptr;
+  vk::CommandBuffer commandBuffer = nullptr;
 
   void init_vulkan() {
     create_instance();
@@ -51,6 +53,9 @@ class VulkanApp{
     create_swapchain();
     createImageViews();
     createGraphicsPipeline();
+    createCommandPool();
+    createCommandBuffer();
+
   }
 
   void create_instance () {
@@ -253,6 +258,26 @@ class VulkanApp{
     graphicsPipeline = vk_device.createGraphicsPipeline(nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()).value;
   }
 
+  void createCommandPool() {
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+    uint32_t queueIndex = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+    vk::CommandPoolCreateInfo poolInfo{};
+    poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+    poolInfo.queueFamilyIndex = queueIndex;
+
+    commandPool = vk_device.createCommandPool(poolInfo);
+
+
+  }
+  void createCommandBuffer() {
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+    vk::CommandBufferAllocateInfo allocInfo{};
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandBufferCount =1;
+    commandBuffer = vk_device.allocateCommandBuffers(allocInfo).front();
+
+  }
 
 
   void cleanup(){
