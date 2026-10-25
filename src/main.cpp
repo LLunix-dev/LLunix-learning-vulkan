@@ -6,6 +6,7 @@
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
+#include <vulkan/vulkan_core.h>
 
 static std::vector<char> readFile(const std::string& filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -279,7 +280,33 @@ class VulkanApp{
 
   }
 
+  void recordCommandBuffer(uint32_t imageIndex){
+    vk::Result result = commandBuffer.begin({});
+  }
 
+  void transition_image_layout(uint32_t imageIndex,
+                               vk::ImageLayout old_layout,
+                               vk::ImageLayout new_layout,
+                               vk::AccessFlags2 src_access_mask,
+                               vk::AccessFlags2 dst_access_mask,
+                               vk::PipelineStageFlags2 src_stage_mask,
+                               vk::PipelineStageFlags2 dst_stage_mask) {
+
+    vk::ImageMemoryBarrier2 barrier = {};
+    barrier.srcStageMask = src_stage_mask;
+    barrier.srcAccessMask = src_access_mask;
+    barrier.dstStageMask = dst_stage_mask;
+    barrier.dstAccessMask = dst_access_mask;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = swapChainImages[imageIndex],
+    barrier.subresourceRange = vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+
+
+  }
   void cleanup(){
 
 
@@ -320,6 +347,7 @@ class VulkanApp{
 
 
 int main() {
+  std::cout << "C++ version: " << __cplusplus << '\n';
   VulkanApp app;
   app.run();
   return 0;
