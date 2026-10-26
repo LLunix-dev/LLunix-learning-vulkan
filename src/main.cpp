@@ -7,6 +7,8 @@
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 static std::vector<char> readFile(const std::string& filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -26,6 +28,7 @@ class VulkanApp{
   public:
   void run(){
     init_vulkan();
+    mainLoop();
     cleanup();
   }
   private:
@@ -57,6 +60,16 @@ class VulkanApp{
     createCommandPool();
     createCommandBuffer();
 
+  }
+  void mainLoop() {
+    while (!glfwWindowShouldClose(window)) {
+      glfwPollEvents();
+      drawFrame();
+    }
+  }
+
+  void drawFrame() {
+    //todo
   }
 
   void create_instance () {
@@ -282,6 +295,42 @@ class VulkanApp{
 
   void recordCommandBuffer(uint32_t imageIndex){
     vk::Result result = commandBuffer.begin({});
+    transition_image_layout(imageIndex,
+                            vk::ImageLayout::eUndefined,
+                            vk::ImageLayout::eColorAttachmentOptimal,
+                            {},
+                            vk::AccessFlagBits2::eColorAttachmentWrite,
+                            vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                            vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f,0.0f,0.0f,1.0f);
+    vk::RenderingAttachmentInfo attachmentInfo = {};
+    attachmentInfo.imageView = swapChainImageViews[imageIndex];
+    attachmentInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    attachmentInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    attachmentInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    attachmentInfo.clearValue = clearColor;
+    vk::RenderingInfo renderingInfo = {};
+    renderingInfo.renderArea = {.offset = {0,0}, .extent = swapChainExtent};
+    renderingInfo.layerCount = 1;
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachments = &attachmentInfo;
+    commandBuffer.beginRendering(renderingInfo);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+    commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height)));
+    commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0,0), swapChainExtent));
+    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.endRendering();
+
+    commandBuffer.endRendering();
+    transition_image_layout(imageIndex,
+                            vk::ImageLayout::eColorAttachmentOptimal,
+                            vk::ImageLayout::ePresentSrcKHR,
+                            vk::AccessFlagBits2::eColorAttachmentWrite,
+                            {},
+                            vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                            vk::PipelineStageFlagBits2::eBottomOfPipe);
+    commandBuffer.end();
   }
 
   void transition_image_layout(uint32_t imageIndex,
@@ -303,6 +352,12 @@ class VulkanApp{
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = swapChainImages[imageIndex],
     barrier.subresourceRange = vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+    vk::DependencyInfo dependency_info = {};
+    dependency_info.dependencyFlags = {};
+    dependency_info.imageMemoryBarrierCount = 1;
+    dependency_info.pImageMemoryBarriers = &barrier;
+
+    commandBuffer.pipelineBarrier2(dependency_info);
 
 
 
