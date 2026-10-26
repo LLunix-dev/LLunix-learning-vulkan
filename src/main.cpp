@@ -2,12 +2,13 @@
 #include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <iostream>
+#include <stdexcept>
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
-#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
 static std::vector<char> readFile(const std::string& filename) {
@@ -36,6 +37,7 @@ class VulkanApp{
   vkb::Instance vkb_instance;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
   vkb::Device vkb_device;
+  vk::Queue graphics_queue;
   vkb::Swapchain vkb_swapchain;
   std::vector<vk::ImageView> swapChainImageViews;
   vk::Format swapChainSurfaceFormat;
@@ -47,6 +49,10 @@ class VulkanApp{
   vk::Pipeline graphicsPipeline = nullptr;
   vk::CommandPool commandPool = nullptr;
   vk::CommandBuffer commandBuffer = nullptr;
+  vk::Semaphore presentCompleteSemaphore = nullptr;
+  std::vector<vk::Semaphore> renderFinishedSemaphores;
+  vk::Fence drawFence = nullptr;
+
 
   void init_vulkan() {
     create_instance();
@@ -59,7 +65,7 @@ class VulkanApp{
     createGraphicsPipeline();
     createCommandPool();
     createCommandBuffer();
-
+    createSyncObjects();
   }
   void mainLoop() {
     while (!glfwWindowShouldClose(window)) {
@@ -67,9 +73,58 @@ class VulkanApp{
       drawFrame();
     }
   }
+  void createSyncObjects() {
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+    presentCompleteSemaphore = vk_device.createSemaphore(vk::SemaphoreCreateInfo());
+    renderFinishedSemaphores.resize(swapChainImages.size());
+
+    for (auto& semaphore : renderFinishedSemaphores) {
+        semaphore = vk_device.createSemaphore(vk::SemaphoreCreateInfo{});
+    }
+    vk::FenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+    drawFence = vk_device.createFence(fenceCreateInfo);
+
+
+
+  
+  }
 
   void drawFrame() {
-    //todo
+    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+
+    auto fenceResult = vk_device.waitForFences(1, &drawFence, vk::True, UINT64_MAX);
+    if (fenceResult != vk::Result::eSuccess) {
+      throw std::runtime_error("Failed to wait for Fence idk");
+    }
+    vk_device.resetFences(drawFence);
+    vk::SwapchainKHR swapChain = vkb_swapchain.swapchain;
+    auto [result, imageIndex] = vk_device.acquireNextImageKHR(swapChain, UINT64_MAX, presentCompleteSemaphore, nullptr);
+    recordCommandBuffer(imageIndex);
+
+    vk::Semaphore renderFinished =
+    renderFinishedSemaphores.at(imageIndex);
+
+    vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
+    vk::SubmitInfo submitInfo = {};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
+    submitInfo.pWaitDstStageMask = &waitDestinationStageMask;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &renderFinished;
+
+    vk_device.resetFences(1, &drawFence);
+    graphics_queue.submit(submitInfo, drawFence);
+
+    vk::PresentInfoKHR presentInfoKHR = {};
+    presentInfoKHR.waitSemaphoreCount = 1;
+    presentInfoKHR.pWaitSemaphores = &renderFinished;
+    presentInfoKHR.swapchainCount = 1;
+    presentInfoKHR.pSwapchains = &swapChain;
+    presentInfoKHR.pImageIndices = &imageIndex;
+    result = graphics_queue.presentKHR(presentInfoKHR);
   }
 
   void create_instance () {
@@ -85,7 +140,8 @@ class VulkanApp{
   void init_window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(1028, 1028, "LLunixs Vulkan Journey", NULL, NULL);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window = glfwCreateWindow(600, 600, "LLunixs Vulkan Journey", NULL, NULL);
   }
   void create_surface(){
     VkResult glfw_result = glfwCreateWindowSurface(vkb_instance, window, nullptr, &surface);
@@ -97,6 +153,7 @@ class VulkanApp{
     vk::PhysicalDeviceVulkan11Features features11{};
     features11.shaderDrawParameters = VK_TRUE;
     vk::PhysicalDeviceVulkan13Features features13{};
+    features13.synchronization2 = VK_TRUE;
     features13.dynamicRendering = VK_TRUE;
     vkb::PhysicalDeviceSelector selector{ vkb_instance };
     auto phys_ret = selector.set_surface(surface).set_required_features_11(features11).set_required_features_13(features13).select();
@@ -132,12 +189,19 @@ class VulkanApp{
     if (!ghraphics_queue_ret) {
       std::cerr << "Failet do ged da ghraphics que";
     }
-    VkQueue graphics_queue = ghraphics_queue_ret.value();
+    graphics_queue = ghraphics_queue_ret.value();
   }
 
   void create_swapchain() {
     vkb::SwapchainBuilder swapchain_builder{ vkb_device };
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
 
+    swapchain_builder.set_desired_extent(
+                                         static_cast<uint32_t>(width),
+                                         static_cast<uint32_t>(height)
+    );
     auto swap_ret = swapchain_builder.build();
     if(!swap_ret){
       std::cerr << "i dont want to write all this";
@@ -147,10 +211,31 @@ class VulkanApp{
     swapChainSurfaceFormat = static_cast<vk::Format>(vkb_swapchain.image_format);
     auto images_ret = vkb_swapchain.get_images();
 
-    vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
 
-    swapChainExtent = chooseSwapExtent(surfaceCapabilities);
+    vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
 
+    std::cout << "Surface currentExtent: "
+          << capabilities.currentExtent.width << " x "
+          << capabilities.currentExtent.height << '\n';
+
+std::cout << "Surface minImageExtent: "
+          << capabilities.minImageExtent.width << " x "
+          << capabilities.minImageExtent.height << '\n';
+
+std::cout << "Surface maxImageExtent: "
+          << capabilities.maxImageExtent.width << " x "
+          << capabilities.maxImageExtent.height << '\n';
+
+// After creating the swapchain with Vk-Bootstrap:
+std::cout << "Vk-Bootstrap extent: "
+          << vkb_swapchain.extent.width << " x "
+          << vkb_swapchain.extent.height << '\n';
+
+    swapChainExtent = vk::Extent2D{
+      vkb_swapchain.extent.width,
+      vkb_swapchain.extent.height
+    };
+    swapChainImages.clear();
     for (VkImage image : images_ret.value()) {
       swapChainImages.emplace_back(image);
     }
@@ -294,7 +379,10 @@ class VulkanApp{
   }
 
   void recordCommandBuffer(uint32_t imageIndex){
-    vk::Result result = commandBuffer.begin({});
+    vk::CommandBufferBeginInfo beginInfo{};
+
+    commandBuffer.reset();
+    commandBuffer.begin(beginInfo);
     transition_image_layout(imageIndex,
                             vk::ImageLayout::eUndefined,
                             vk::ImageLayout::eColorAttachmentOptimal,
@@ -320,7 +408,6 @@ class VulkanApp{
     commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height)));
     commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0,0), swapChainExtent));
     commandBuffer.draw(3, 1, 0, 0);
-    commandBuffer.endRendering();
 
     commandBuffer.endRendering();
     transition_image_layout(imageIndex,
