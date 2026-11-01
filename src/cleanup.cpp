@@ -1,34 +1,37 @@
-#include "vulkan/vulkan.hpp"
-#include <cstdint>
-#include <iostream>
-#include <stdexcept>
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
-#include <fstream>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 #include "renderer.hpp"
 
 void VulkanApp::cleanup() {
-    vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
-    vk_device.destroyPipeline(graphicsPipeline);
-    vk_device.destroyPipelineLayout(pipelineLayout);
-    vk_device.destroyShaderModule(shaderModule);
+  vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
 
-    for (auto imageView : swapChainImageViews) {
-        vk_device.destroyImageView(imageView);
-    }
+  vk_device.destroyCommandPool(commandPool);
+  vk_device.destroySemaphore(presentCompleteSemaphore);
+  for(vk::Semaphore &semaphore : renderFinishedSemaphores) {
+    vk_device.destroySemaphore(semaphore);
+  }
+  vk_device.destroyFence(drawFence);
 
-    swapChainImageViews.clear();
+  vk_device.destroyPipeline(graphicsPipeline);
+  vk_device.destroyPipelineLayout(pipelineLayout);
+  vk_device.destroyShaderModule(shaderModule);
 
-    vkb::destroy_swapchain(vkb_swapchain);
+  for (auto imageView : swapChainImageViews) {
+    vk_device.destroyImageView(imageView);
+  }
 
-    vkb::destroy_device(vkb_device);
-    vkb::destroy_surface(vkb_instance, surface);
-    vkb::destroy_instance(vkb_instance);
+  swapChainImageViews.clear();
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+  vkb::destroy_swapchain(vkb_swapchain);
+
+  vkb::destroy_device(vkb_device);
+  vkb::destroy_surface(vkb_instance, surface);
+  vkb::destroy_instance(vkb_instance);
+
+  glfwDestroyWindow(window);
+  glfwTerminate();
 }
