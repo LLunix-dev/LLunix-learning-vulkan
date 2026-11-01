@@ -12,7 +12,17 @@ find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
 add_executable(VulkanApp
-    src/main.cpp
+  src/main.cpp
+  src/cleanup.cpp
+  src/pipline.cpp
+  src/commands.cpp
+  src/mainLoop.cpp
+  src/renderer.hpp
+  src/swapchain.cpp
+  src/sync_objects.cpp
+  src/vulkan_window.cpp
+  src/graphics_queue.cpp
+
   )
 
 
