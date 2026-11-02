@@ -25,7 +25,7 @@ void VulkanApp::cleanup() {
   }
 
   swapChainImageViews.clear();
-
+  cleanupSwapchain();
   vkb::destroy_swapchain(vkb_swapchain);
 
   vkb::destroy_device(vkb_device);

@@ -23,7 +23,7 @@ void VulkanApp::create_instance () {
 void VulkanApp::init_window() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+  //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   window = glfwCreateWindow(600, 600, "LLunix's Vulkan Engine", NULL, NULL);
 }
 void VulkanApp::create_surface(){

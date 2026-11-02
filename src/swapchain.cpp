@@ -9,6 +9,20 @@
 #include <vulkan/vulkan_structs.hpp>
 #include "renderer.hpp"
 
+void VulkanApp::recreateSwapchain() {
+  vk::Device vk_device = static_cast<vk::Device>(vkb_device.device);
+
+  vk_device.waitIdle();
+  create_swapchain();
+  createImageViews();
+
+}
+
+
+void VulkanApp::cleanupSwapchain() {
+  swapChainImageViews.clear();
+  //vk::SwapchainKHR swapChain = static_cast<vk::SwapchainKHR>(vkb_swapchain.swapchain);
+}
 void VulkanApp::create_swapchain() {
   vkb::SwapchainBuilder swapchain_builder{ vkb_device };
   int width = 0;

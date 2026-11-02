@@ -55,7 +55,20 @@ void VulkanApp::drawFrame() {
   }
   vk_device.resetFences(drawFence);
   vk::SwapchainKHR swapChain = vkb_swapchain.swapchain;
-  auto [result, imageIndex] = vk_device.acquireNextImageKHR(swapChain, UINT64_MAX, presentCompleteSemaphore, nullptr);
+  auto [result, imageIndex] = vk_device.acquireNextImageKHR(swapChain, UINT64_MAX,
+                                                            presentCompleteSemaphore,
+                                                            nullptr);
+
+  if(result == vk::Result::eErrorOutOfDateKHR) {
+    recreateSwapchain();
+    return;
+  }
+  if(result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
+    assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
+    throw std::runtime_error("Failed to aquire swap chain image!");
+  }
+
+
   recordCommandBuffer(imageIndex);
 
   vk::Semaphore renderFinished =
@@ -81,4 +94,7 @@ void VulkanApp::drawFrame() {
   presentInfoKHR.pSwapchains = &swapChain;
   presentInfoKHR.pImageIndices = &imageIndex;
   result = graphics_queue.presentKHR(presentInfoKHR);
+  if ((result == vk::Result::eSuboptimalKHR) || (result == vk::Result::eErrorOutOfDateKHR)) {
+    recreateSwapchain();
+  }
 }

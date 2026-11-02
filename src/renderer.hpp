@@ -62,6 +62,8 @@ private:
                                vk::AccessFlags2 dst_access_mask,
                                vk::PipelineStageFlags2 src_stage_mask,
                                vk::PipelineStageFlags2 dst_stage_mask);
+  void recreateSwapchain();
+  void cleanupSwapchain();
 
   void cleanup();
   vk::Extent2D chooseSwapExtent(vk::SurfaceCapabilitiesKHR const &capabilities);
